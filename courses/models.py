@@ -3,7 +3,6 @@ from django.contrib.auth.models import User
 from django.contrib.contenttypes.models import ContentType
 from django.contrib.contenttypes.fields import GenericForeignKey
 from .fields import OrderField
-from django.db.models import Max
 
 
 class Subject(models.Model):
@@ -42,19 +41,7 @@ class Module(models.Model):
                                on_delete=models.CASCADE)
     title = models.CharField(max_length=200)
     description = models.TextField(blank=True)
-    order = OrderField(blank=True, for_fields=['course'], default=0)
-
-    def save(self, *args, **kwargs):
-        if self.order == 0:  # only run on module creation, not on update
-            # get the current highest order number for modules in this course
-            max_order = Module.objects.filter(course=self.course).aggregate(Max('order'))['order__max']
-
-            if max_order is None:
-                max_order = 0
-
-            self.order = max_order + 1
-
-        super().save(*args, **kwargs)
+    order = OrderField(blank=True, for_fields=['course'])
 
     class Meta:
         ordering = ['order']
@@ -69,12 +56,11 @@ class Content(models.Model):
                                on_delete=models.CASCADE)
     content_type = models.ForeignKey(ContentType,
                                      on_delete=models.CASCADE,
-                                     limit_choices_to={'model__in': (
-                                         'text',
-                                         'video',
-                                         'image',
-                                         'file'
-                                     )})
+                                     limit_choices_to={'model__in':(
+                                     'text',
+                                     'video',
+                                     'image',
+                                     'file')})
     object_id = models.PositiveIntegerField()
     item = GenericForeignKey('content_type', 'object_id')
     order = OrderField(blank=True, for_fields=['module'])
@@ -107,7 +93,7 @@ class File(ItemBase):
 
 
 class Image(ItemBase):
-    file = models.FileField(upload_to='images')
+       file = models.FileField(upload_to='images')
 
 
 class Video(ItemBase):
