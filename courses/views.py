@@ -11,7 +11,9 @@ from django.apps import apps
 from braces.views import CsrfExemptMixin, JsonRequestResponseMixin
 from .forms import ModuleFormSet
 from .models import Course
-from .models import Module, Content
+from .models import Module, Content, Subject
+from django.db.models import Count
+from django.views.generic.detail import DetailView
 
 
 class ManageCourseListView(ListView):
@@ -22,6 +24,25 @@ class ManageCourseListView(ListView):
         qs = super().get_queryset()
         return qs.filter(owner=self.request.user)
 
+class CourseListView(TemplateResponseMixin, View):
+    model = Course
+    template_name = 'courses/course/list.html'
+
+    def get(self, request, subject=None):
+        subjects = Subject.objects.annotate(
+            total_courses=Count('courses'))
+        courses = Course.objects.annotate(
+            total_modules=Count('modules'))
+        if subject:
+            subject = get_object_or_404(Subject, slug=subject)
+            courses = courses.filter(subject=subject)
+        return self.render_to_response({'subjects': subjects,
+                                        'subject': subject,
+                                        'courses': courses})
+    
+class CourseDetailView(DetailView):
+    model = Course
+    template_name = 'courses/course/detail.html'
 
 class OwnerMixin:
     def get_queryset(self):
